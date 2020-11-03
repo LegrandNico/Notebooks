@@ -42,7 +42,7 @@ sns.set_context('talk')
 # In[3]:
 
 
-Image(url='https://github.com/embodied-computation-group/systole/raw/dev/notebooks/images/ecg.png', width=800)
+Image(url='https://github.com/LegrandNico/Notebooks/raw/main/images/ecg.png', width=800)
 
 
 # First, let's load a dataset containing ECG and respiratory recording from a health participant. These data were acquired using the paradigm described in Legrand et al. (2020). ECG was recorded using a 3-electrode system and the respiration was acquired using a respiratory belt placed around the chest of the participant. During the recording, the participant had to rate the emotional valence of 36 neutral and 36 disgusting images (10 seconds max). Here, the stim channel encodes the presentation of disgusting (2) and neutral (1) images. The electrodermal activity was also recorded during this paradigm, but here we will only load the data of interest to save memory, then we only provide these arguments in the `modalities` parameter to speed up the download.
@@ -112,6 +112,8 @@ axs[2].set_ylabel('R-R interval (ms)')
 sns.despine()
 
 
+# ### R-R intervals and beats per minute
+
 # The R-R intervals are expressed in milliseconds, but can also be converted into beats per minutes (BPM) using the following formula:
 # $$BPM = \frac{60000}{RR_{Intervals}} $$
 
@@ -156,7 +158,7 @@ plot_raw(ecg_df[(ecg_df.time>500) & (ecg_df.time<550)], type='ecg', ecg_method='
 # In[12]:
 
 
-Image(url='https://github.com/embodied-computation-group/systole/raw/dev/notebooks/images/pulseOximeter.png', width=1200)
+Image(url='https://github.com/LegrandNico/Notebooks/raw/main/images/pulseOximeter.png', width=1200)
 
 
 # First, we import an example signal. This time serie represent a PPG recording from pulse oximeter in a young health participant. The sampling frequecy is 75 Hz (75 data points/seconds)
@@ -174,7 +176,7 @@ ppg = import_ppg()
 # In[14]:
 
 
-Image(url='https://github.com/embodied-computation-group/systole/raw/dev/notebooks/images/ppgRecording.png', width=1200)
+Image(url='https://github.com/LegrandNico/Notebooks/raw/main/images/ppgRecording.png', width=1200)
 
 
 # As before, you can plot the time serie and visualize peak detection and the inter beat interval time series using the `plot_raw` function.
@@ -241,25 +243,18 @@ plot_nonlinear(rr)
 
 # ## Instantaneous heart rate
 
-# Finding R peaks.
+# Finding R peaks and extract instantaneous heart rate.
 
 # In[21]:
 
 
 signal, peaks = ecg_peaks(ecg_df.ecg, method='pan-tompkins', sfreq=1000, find_local=True)
-
-
-# Extract instantaneous heart rate
-
-# In[22]:
-
-
 heartrate, new_time = heart_rate(peaks, kind='previous', unit='bpm')
 
 
-# Downsample the stim events channel to fit with the new sampling frequency (1000 Hz)
+# Create stim vectors for neutral and discusting images separately. Here, 1 encode the presentation of an image.
 
-# In[23]:
+# In[22]:
 
 
 neutral, disgust = np.zeros(len(new_time)), np.zeros(len(new_time))
@@ -270,7 +265,7 @@ neutral[np.round(np.where(ecg_df.stim.to_numpy() == 1)[0]).astype(int)] = 1
 
 # Event related plot.
 
-# In[24]:
+# In[23]:
 
 
 sns.set_context('talk')
@@ -301,14 +296,14 @@ plt.tight_layout()
 
 # ## Artefacts correction
 
-# Cardiac signals ccan be noisy, either due to artefacts in the signal, invalid peaks detection or even ECG signal. We often distinguish between three kind of RR artefacts:
+# ECG and PPG recording and the resulting R-R intervals time series can be noisy, either due to artefacts in the signal or invalid peaks detection. Artefacts in the signal are mostly due to movements or inappropriate recording setup (line noise...). These distributions can be attenuated or removed by using appropriate filtering approaches, or ultimately by checking the recorded signal and manually correcting the time series. However, even when using valid ECG and PPG recording, the R-R intervals time series can introduce intervals that will look like outliers. We often distinguish between three kinds of such R-R artefacts:
 # * Missing R peaks / long beats
 # * Extra R peaks or short beats
-# * Ectopi beats forming negative positive negative (NPN) or positive negative positive (PNP) segments.
+# * Ectopic beats forming negative-positive-negative (NPN) or positive-negative-positive (PNP) segments.
 
-# Metrics of heart rate variability are highly influenced by RR artefacts, being missing, extra or ectopic beats. The figure bellow exemplify the addition of artefacts to time and frequency domain of heart rate variability.
+# Heart rate variability metrics are highly sensitive to such R-R artefacts, being missing, extra or ectopic beats. This influence can be slightly attenuated in the context in instantaneous heart rate variability due to the averaging approach. But it is crucial to proceed to artefact detection and correction before heart rate variability analysis. [Systole](https://systole-docs.github.io/) implements one efficient algorithm for artefacts detection based on adaptive thresholding of first and second derivatives of the R-R intervals time series (see **Lipponen & Tarvainen, 2019**).
 
-# In[25]:
+# In[24]:
 
 
 plot_subspaces(rr, height=300)
